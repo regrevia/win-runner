@@ -16,5 +16,14 @@ per repository, same labels). Repository list from `-Repos` or `scripts/repos.tx
 docs/REGISTRATION.md`](docs/REGISTRATION.md) — scope, registration, removal,
   requirements and the `pull_request` rule.
 
+- [`scripts/doctor.ps1`](scripts/doctor.ps1) — read-only health check: instance
+  folder, service status and start type, runner version, work folder size, for
+  every repository in `scripts/repos.txt`.
+- [`.github/workflows/ops-health.yml`](.github/workflows/ops-health.yml) —
+  dispatch it to run the same check on the machine itself.
+- [`docs/USING-THE-MACHINE.md`](docs/USING-THE-MACHINE.md) — the contract for
+  serving several projects from one machine: labels, folders, what is
+  independent, how a project adds itself, how the machine stays available.
+
 This repository holds infrastructure only. What each project checks on the node
 stays in that project.
