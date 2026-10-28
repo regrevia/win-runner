@@ -29,7 +29,8 @@ param(
     [string]$Name,
     [string]$Work = "_work",
     [string[]]$Labels = @("windows", "x64"),
-    [switch]$Ephemeral
+    [switch]$Ephemeral,
+    [switch]$NoService
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,9 +48,11 @@ if (-not $RunnerRoot) { $RunnerRoot = Join-Path "C:\actions-runner" $slug }
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw "run this from an elevated PowerShell: the runner is installed as a service"
+$isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin -and -not $NoService) {
+    throw "not running as administrator: pass -NoService to register and run the runner interactively instead of installing it as a service"
 }
+if (-not $isAdmin) { Write-Host "-NoService: registering without a Windows service; the runner stays in the foreground" }
 
 if (Get-Service -Name "actions.runner.*" -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -like "*$slug*" -or $_.Name -like "*$slug*" }) {
@@ -92,6 +95,8 @@ try {
 
     if ($Ephemeral) {
         Write-Host "ephemeral runner configured; start it with run.cmd when a job is waiting"
+    } elseif (-not $isAdmin) {
+        Write-Host ("registered; start it now with: & '{0}\run.cmd' (keep this window open, stop with Ctrl+C)" -f $RunnerRoot)
     } else {
         & (Join-Path $RunnerRoot "svc.cmd") install
         if ($LASTEXITCODE -ne 0) { throw "svc.cmd install failed with exit code $LASTEXITCODE" }

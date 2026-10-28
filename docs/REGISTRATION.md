@@ -28,6 +28,20 @@ The registration token expires after one hour and registers one runner.
 Add repository-specific labels with `-Labels windows,x64,extra-label`; the script
 always requires `windows` and `x64` because the jobs rely on them.
 
+## Without administrator rights
+
+`config.cmd` itself does not need elevation; only the Windows service does. On a
+machine where you cannot elevate, pass `-NoService` and keep the runner in the
+foreground:
+
+```powershell
+.\scripts\runner-setup.ps1 -Token <token> -Repo <owner>/<repo> -NoService
+& C:\actions-runner\<repo>\run.cmd
+```
+
+The runner then stops when that window closes. GitHub recommends a service for a
+machine that should accept jobs around the clock.
+
 ## Check and remove
 
 ```powershell
