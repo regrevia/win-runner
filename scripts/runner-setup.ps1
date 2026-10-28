@@ -94,6 +94,23 @@ try {
     if ($useService) { $configArgs += "--runasservice" }
 
     Write-Host ("registering {0} for {1} at {2}" -f $Name, $Repo, $RunnerRoot)
+    if (Test-Path -LiteralPath (Join-Path $RunnerRoot ".runner")) {
+        # config.cmd refuses to touch a directory that already holds a registration.
+        # Remove the old one properly (GitHub wants a remove token) so the machine
+        # ends up with exactly one instance per repo, wired the way this script wants.
+        Write-Host "existing registration found; removing it first"
+        $removeToken = & gh api -X POST ("repos/{0}/actions/runners/remove-token" -f $Repo) --jq .token
+        & gh api -X DELETE ("repos/{0}/actions/runners" -f $Repo) "--silent" 2>$null | Out-Null
+        if ($removeToken) {
+            & (Join-Path $RunnerRoot "config.cmd") remove --token $removeToken 2>&1 | Out-Host
+            $removeToken = $null
+            Remove-Variable -Name removeToken -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath (Join-Path $RunnerRoot ".runner")) {
+            throw ("could not clear the old registration in {0}; delete .runner/.credentials there and re-run" -f $RunnerRoot)
+        }
+    }
+
     & (Join-Path $RunnerRoot "config.cmd") @configArgs
     if ($LASTEXITCODE -ne 0) { throw "config.cmd failed with exit code $LASTEXITCODE" }
 
