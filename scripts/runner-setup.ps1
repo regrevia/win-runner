@@ -100,7 +100,6 @@ try {
         # ends up with exactly one instance per repo, wired the way this script wants.
         Write-Host "existing registration found; removing it first"
         $removeToken = & gh api -X POST ("repos/{0}/actions/runners/remove-token" -f $Repo) --jq .token
-        & gh api -X DELETE ("repos/{0}/actions/runners" -f $Repo) "--silent" 2>$null | Out-Null
         if ($removeToken) {
             & (Join-Path $RunnerRoot "config.cmd") remove --token $removeToken 2>&1 | Out-Host
             $removeToken = $null
