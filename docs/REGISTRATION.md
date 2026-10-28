@@ -25,8 +25,13 @@ gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token --jq .tok
 
 The registration token expires after one hour and registers one runner.
 
-Add repository-specific labels with `-Labels windows,x64,extra-label`; the script
-always requires `windows` and `x64` because the jobs rely on them.
+Add machine labels with `-Labels windows,x64,regrevia-win`; the script always
+requires `windows` and `x64` because the jobs rely on them.
+
+Labels describe the machine, never the repository. A runner is bound to one
+repository by its registration, so keep the same labels on every instance of the
+same machine and let the registration decide who may use it. Workflows then
+select the machine with `runs-on: [self-hosted, windows, x64, regrevia-win]`.
 
 ## Without administrator rights
 

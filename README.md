@@ -1,6 +1,6 @@
 # win-runner
 
-Self-hosted Windows runner registration for `regrevia` repositories.
+Self-hosted Windows runner registration for `regrevia` repositories; labels describe the machine, the registration decides the repository.
 
 Repository-scoped by design: a personal GitHub account has no organization-level
 runners, so one machine serves several repositories as several independent runner
