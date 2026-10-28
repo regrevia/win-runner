@@ -1,9 +1,30 @@
 # One owner/name per line. Each repository gets its own runner instance and its
 # own root folder; the labels stay the same because they describe the machine.
-# Add a project here, then run register-repos.ps1 once in an elevated shell.
-regrevia/dsh-unlag
+# Active as of 2026-10-28: every public regrevia repository pushed in the last three days.
+# 23 to register; Envoy already has an instance. Comment a line out to stop offering that repository the machine,
+# then run: .\scripts\register-repos.ps1 -Repos regrevia/<name>  (or remove its instance).
+
+regrevia/dsh-pause-resume
+regrevia/astrea-studio
+regrevia/dsh-mobile-use
+regrevia/dsh-fast-mode
+regrevia/dsh-pet-voice
+regrevia/dsh-crash-lore
 regrevia/win-runner
-# regrevia/Envoy
-# regrevia/dsh-lite-memory
-# regrevia/dsh-vantage
-# regrevia/dsh-adb
+regrevia/dsh-lite-memory
+# regrevia/Envoy  (already registered as regrevia-envoy)
+regrevia/awesome-dsh-plugin
+regrevia/dsh-chat-link-actions
+regrevia/dsh-unlag
+regrevia/dsh-inner-browser-use
+regrevia/dsh-install-check
+regrevia/dsh-vantage
+regrevia/opencow
+regrevia/codex-loop
+regrevia/cattle-showcase
+regrevia/Brian
+regrevia/regrevia.github.io
+regrevia/veilkey
+regrevia/Revia
+regrevia/Multiverse
+regrevia/Ayes
