@@ -1,5 +1,9 @@
-# One owner/name per line. Each repository gets its own runner instance;
-# labels stay the same because they describe the machine.
+# One owner/name per line. Each repository gets its own runner instance and its
+# own root folder; the labels stay the same because they describe the machine.
+# Add a project here, then run register-repos.ps1 once in an elevated shell.
 regrevia/dsh-unlag
+regrevia/win-runner
 # regrevia/Envoy
 # regrevia/dsh-lite-memory
+# regrevia/dsh-vantage
+# regrevia/dsh-adb
