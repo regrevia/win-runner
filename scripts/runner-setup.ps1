@@ -54,13 +54,17 @@ if (-not $isAdmin -and -not $NoService) {
 }
 if (-not $isAdmin) { Write-Host "-NoService: registering without a Windows service; the runner stays in the foreground" }
 
-if (Get-Service -Name "actions.runner.*" -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -like "*$slug*" -or $_.Name -like "*$slug*" }) {
+$existing = Get-Service -Name "actions.runner.*" -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -like "*$slug*" -or $_.Name -like "*$slug*" }
+if ($existing) {
     Write-Host "a runner service for '$slug' already exists; removing it first so this run is idempotent"
-    Get-Service -Name "actions.runner.*" | Where-Object { $_.Name -like "*$slug*" } | ForEach-Object {
-        & (Join-Path $RunnerRoot "svc.cmd") stop 2>$null | Out-Null
-        & (Join-Path $RunnerRoot "svc.cmd") uninstall 2>$null | Out-Null
+    foreach ($svc in @($existing)) {
+        if ($svc.Status -ne "Stopped") { Stop-Service -Name $svc.Name -Force -ErrorAction SilentlyContinue }
+        # Windows has no svc.cmd; the service object is registered by config.cmd
+        # --runasservice and deleted through the SCM.
+        & sc.exe delete $svc.Name | Out-Null
     }
+    Start-Sleep -Seconds 2
 }
 
 $env:RUNNER_ALLOW_RUNASROOT = $null
