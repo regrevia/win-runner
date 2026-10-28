@@ -1,0 +1,34 @@
+name: ops-health
+
+# Runs on the self-hosted Windows machine itself. Dispatch it to ask the machine
+# whether every registered repository still has a live runner instance; no admin
+# rights needed, it only reads service state.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: [self-hosted, windows, x64, regrevia-win]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: mask machine identity
+        shell: powershell
+        run: |
+          Write-Host "::add-mask::$env:USERNAME"
+          Write-Host "::add-mask::$env:COMPUTERNAME"
+          Write-Host "runner=$env:RUNNER_NAME"
+
+      - name: report instances
+        shell: powershell
+        run: |
+          Write-Host "service host: $env:COMPUTERNAME"
+          .\scripts\doctor.ps1
