@@ -1,0 +1,4 @@
+# One owner/name per line. Each repository gets its own runner instance;
+# labels stay the same because they describe the machine.
+# regrevia/Envoy
+# regrevia/dsh-lite-memory
