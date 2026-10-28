@@ -87,7 +87,11 @@ try {
         "--work", $Work,
         "--labels", ($Labels -join ",")
     )
+    # On Windows a service is created by config.cmd itself; there is no svc.cmd
+    # in the runner package. --runasservice needs elevation.
+    $useService = $isAdmin -and -not $Ephemeral -and -not $NoService
     if ($Ephemeral) { $configArgs += "--ephemeral" }
+    if ($useService) { $configArgs += "--runasservice" }
 
     Write-Host ("registering {0} for {1} at {2}" -f $Name, $Repo, $RunnerRoot)
     & (Join-Path $RunnerRoot "config.cmd") @configArgs
@@ -95,15 +99,16 @@ try {
 
     if ($Ephemeral) {
         Write-Host "ephemeral runner configured; start it with run.cmd when a job is waiting"
-    } elseif (-not $isAdmin) {
-        Write-Host ("registered; start it now with: & '{0}\run.cmd' (keep this window open, stop with Ctrl+C)" -f $RunnerRoot)
+    } elseif (-not $useService) {
+        Write-Host ("registered; start it now with: & '{0}\run.cmd' (keep that window open)" -f $RunnerRoot)
     } else {
-        & (Join-Path $RunnerRoot "svc.cmd") install
-        if ($LASTEXITCODE -ne 0) { throw "svc.cmd install failed with exit code $LASTEXITCODE" }
-        & (Join-Path $RunnerRoot "svc.cmd") start
-        if ($LASTEXITCODE -ne 0) { throw "svc.cmd start failed with exit code $LASTEXITCODE" }
-        Start-Sleep -Seconds 3
-        & (Join-Path $RunnerRoot "svc.cmd") status
+        $svc = Get-Service -Name "actions.runner.*" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like ("*{0}*" -f $Name) } | Select-Object -First 1
+        if (-not $svc) { throw "service was not created; re-run this script from an elevated shell" }
+        if ($svc.Status -ne "Running") { Start-Service -Name $svc.Name }
+        Start-Sleep -Seconds 2
+        Get-Service -Name $svc.Name | Select-Object Name, Status, StartType
+        Write-Host ("service {0} is {1}; it starts on boot without anyone logging in" -f $svc.Name, (Get-Service -Name $svc.Name).Status)
     }
 }
 finally {
