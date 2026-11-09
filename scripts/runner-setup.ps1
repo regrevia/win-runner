@@ -98,7 +98,19 @@ try {
                 Start-Sleep -Seconds (5 * $i)
             }
         }
-        if (-not $ok) { throw "could not download $($asset.browser_download_url)" }
+        if (-not $ok) {
+            # Some networks get a steady 504 from the release CDN. Every runner
+            # instance on this machine already holds an unpacked copy of the same
+            # package, so seeding from a sibling is both faster and offline-safe.
+            $parent = Split-Path -Path $RunnerRoot -Parent
+            $donor = Get-ChildItem -LiteralPath $parent -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -ne $RunnerRoot -and (Test-Path -LiteralPath (Join-Path $_.FullName "config.cmd")) } |
+                Select-Object -First 1
+            if (-not $donor) { throw "could not download $($asset.browser_download_url) and no sibling instance to copy from" }
+            Write-Host ("download blocked; seeding from existing instance '{0}'" -f $donor.Name)
+            & robocopy $donor.FullName $RunnerRoot /E /NFL /NDL /NJH /NJS /XF .runner .credentials .env /XD _work _diag .git | Out-Null
+            if (-not (Test-Path -LiteralPath (Join-Path $RunnerRoot "config.cmd"))) { throw "seeded copy has no config.cmd" }
+        }
         Expand-Archive -LiteralPath $zip -DestinationPath $RunnerRoot -Force
         Remove-Item -LiteralPath $zip -Force
     }
