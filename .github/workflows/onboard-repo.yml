@@ -1,0 +1,36 @@
+name: onboard-repo
+
+# Register this machine as a runner instance for one more repository.
+# Dispatch-only, elevated service required. The token is single-use and masked.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "owner/name to register"
+        required: true
+      token:
+        description: "registration token (gh api ... registration-token)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onboard-repo
+  cancel-in-progress: false
+
+jobs:
+  onboard:
+    runs-on: [self-hosted, windows, x64, regrevia-win]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: register
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "::add-mask::${{ inputs.token }}"
+          .\scripts\runner-setup.ps1 -Token "${{ inputs.token }}" -Repo "${{ inputs.repo }}" -Labels windows,x64,regrevia-win
+          Write-Host "--- services ---"
+          Get-Service actions.runner.* | Sort-Object Name | ForEach-Object { Write-Host "$($_.Name) $($_.Status) $($_.StartType)" }
