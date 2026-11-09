@@ -28,6 +28,8 @@ jobs:
 
       - name: register
         shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Continue"
           Write-Host "::add-mask::${{ inputs.token }}"

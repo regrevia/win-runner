@@ -72,12 +72,15 @@ if (-not (Test-Path -LiteralPath $RunnerRoot)) { New-Item -ItemType Directory -P
 Push-Location $RunnerRoot
 try {
     if (-not (Test-Path -LiteralPath (Join-Path $RunnerRoot "config.cmd"))) {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/actions/runner/releases/latest" -UseBasicParsing
+        # Unauthenticated api.github.com is rate limited per IP; a job token lifts it.
+        $apiHeaders = @{}
+        if ($env:GITHUB_TOKEN) { $apiHeaders["Authorization"] = "Bearer $($env:GITHUB_TOKEN)" }
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/actions/runner/releases/latest" -Headers $apiHeaders -UseBasicParsing
         $asset = $release.assets | Where-Object { $_.name -like "actions-runner-win-x64-*.zip" } | Select-Object -First 1
         if (-not $asset) { throw "no actions-runner-win-x64 asset in the latest runner release" }
         $zip = Join-Path $env:TEMP $asset.name
         Write-Host ("downloading {0}" -f $asset.name)
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -Headers $apiHeaders -UseBasicParsing
         Expand-Archive -LiteralPath $zip -DestinationPath $RunnerRoot -Force
         Remove-Item -LiteralPath $zip -Force
     }
