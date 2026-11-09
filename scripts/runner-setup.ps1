@@ -80,7 +80,25 @@ try {
         if (-not $asset) { throw "no actions-runner-win-x64 asset in the latest runner release" }
         $zip = Join-Path $env:TEMP $asset.name
         Write-Host ("downloading {0}" -f $asset.name)
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -Headers $apiHeaders -UseBasicParsing
+        # objects.githubusercontent.com is flaky from some networks (504); retry, and
+        # prefer curl.exe which resumes and retries on its own.
+        $ok = $false
+        for ($i = 1; $i -le 4 -and -not $ok; $i++) {
+            try {
+                if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+                if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                    & curl.exe -fsSL --retry 3 --retry-all-errors --connect-timeout 30 -o $zip $asset.browser_download_url
+                    if ($LASTEXITCODE -ne 0) { throw "curl exit $LASTEXITCODE" }
+                } else {
+                    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+                }
+                $ok = $true
+            } catch {
+                Write-Host ("download attempt {0} failed: {1}" -f $i, $_.Exception.Message)
+                Start-Sleep -Seconds (5 * $i)
+            }
+        }
+        if (-not $ok) { throw "could not download $($asset.browser_download_url)" }
         Expand-Archive -LiteralPath $zip -DestinationPath $RunnerRoot -Force
         Remove-Item -LiteralPath $zip -Force
     }
