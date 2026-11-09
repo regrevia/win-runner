@@ -30,14 +30,17 @@ jobs:
             $x = Get-Command $c -ErrorAction SilentlyContinue
             if ($x) { Write-Host "$c=$($x.Source)" } else { Write-Host "$c=MISSING" }
           }
+          $ErrorActionPreference = "Continue"
           gh auth status 2>&1 | Select-Object -First 3
           Get-PSDrive C | ForEach-Object { Write-Host "c_free_gb=$([math]::Round($_.Free/1GB,1))" }
 
       - name: gpu
+        continue-on-error: true
         shell: powershell
         run: |
           Write-Host "--- Win32_VideoController ---"
           Get-CimInstance Win32_VideoController | ForEach-Object { Write-Host "name=$($_.Name) driver=$($_.DriverVersion) status=$($_.Status)" }
+          if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) { Write-Host "nvidia-smi=MISSING (no NVIDIA driver on this node)"; Get-CimInstance Win32_VideoController | ForEach-Object { Write-Host "adapter=$($_.Name)" }; exit 0 }
           Write-Host "--- nvidia-smi -L ---"
           (& nvidia-smi -L 2>&1) | Write-Host
           Write-Host "--- gpu query ---"
@@ -48,6 +51,7 @@ jobs:
           (& nvidia-smi -q -d MEMORY 2>&1 | Select-String -Pattern 'WDDM|Not available' | Select-Object -First 6) | Write-Host
 
       - name: fault channels
+        continue-on-error: true
         shell: powershell
         run: |
           try { Get-WinEvent -FilterHashtable @{LogName='System'; Id=4101} -MaxEvents 3 -ErrorAction Stop | ForEach-Object { Write-Host "tdr $($_.TimeCreated) $($_.ProviderName)" } } catch { Write-Host "tdr_none" }
