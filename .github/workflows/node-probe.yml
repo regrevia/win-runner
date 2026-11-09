@@ -1,0 +1,54 @@
+name: node-probe
+
+# Read-only hardware / permission probe of the Windows node. Dispatch only.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: node-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: [self-hosted, windows, x64, regrevia-win]
+    timeout-minutes: 10
+    steps:
+      - name: identity and toolchain
+        shell: powershell
+        run: |
+          Write-Host "::add-mask::$env:USERNAME"
+          Write-Host "::add-mask::$env:COMPUTERNAME"
+          $id = [Security.Principal.WindowsIdentity]::GetCurrent()
+          $p  = New-Object Security.Principal.WindowsPrincipal($id)
+          Write-Host "elevated=$($p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          Write-Host "runner=$env:RUNNER_NAME"
+          Get-CimInstance Win32_OperatingSystem | ForEach-Object { Write-Host "os_build=$($_.BuildNumber) ram_gb=$([math]::Round($_.TotalVisibleMemorySize/1MB,1))" }
+          foreach ($c in @('gh','git','node','bun','nvidia-smi','python','pwsh')) {
+            $x = Get-Command $c -ErrorAction SilentlyContinue
+            if ($x) { Write-Host "$c=$($x.Source)" } else { Write-Host "$c=MISSING" }
+          }
+          gh auth status 2>&1 | Select-Object -First 3
+          Get-PSDrive C | ForEach-Object { Write-Host "c_free_gb=$([math]::Round($_.Free/1GB,1))" }
+
+      - name: gpu
+        shell: powershell
+        run: |
+          Write-Host "--- Win32_VideoController ---"
+          Get-CimInstance Win32_VideoController | ForEach-Object { Write-Host "name=$($_.Name) driver=$($_.DriverVersion) status=$($_.Status)" }
+          Write-Host "--- nvidia-smi -L ---"
+          (& nvidia-smi -L 2>&1) | Write-Host
+          Write-Host "--- gpu query ---"
+          (& nvidia-smi --query-gpu=index,uuid,name,driver_version,memory.total,memory.used,utilization.gpu,temperature.gpu,compute_mode --format=csv,noheader 2>&1) | Write-Host
+          Write-Host "--- compute apps (per-process vram) ---"
+          (& nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv 2>&1) | Write-Host
+          Write-Host "--- WDDM lines ---"
+          (& nvidia-smi -q -d MEMORY 2>&1 | Select-String -Pattern 'WDDM|Not available' | Select-Object -First 6) | Write-Host
+
+      - name: fault channels
+        shell: powershell
+        run: |
+          try { Get-WinEvent -FilterHashtable @{LogName='System'; Id=4101} -MaxEvents 3 -ErrorAction Stop | ForEach-Object { Write-Host "tdr $($_.TimeCreated) $($_.ProviderName)" } } catch { Write-Host "tdr_none" }
+          try { Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='nvlddmkm'} -MaxEvents 3 -ErrorAction Stop | ForEach-Object { Write-Host "nvlddmkm $($_.TimeCreated) id=$($_.Id)" } } catch { Write-Host "nvlddmkm_none" }
