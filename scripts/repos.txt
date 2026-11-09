@@ -28,3 +28,4 @@ regrevia/veilkey
 regrevia/Revia
 regrevia/Multiverse
 regrevia/Ayes
+regrevia/gpu-lease
